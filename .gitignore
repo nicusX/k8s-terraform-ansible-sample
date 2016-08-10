@@ -1,0 +1,8 @@
+# Avoid committing keys
+*.pem
+/ssh.cfg
+/secrets.sh
+
+# terraform state 
+terraform.tfstate.backup
+terraform.tfstate

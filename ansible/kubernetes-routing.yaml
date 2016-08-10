@@ -1,0 +1,63 @@
+---
+
+############################################
+# Setup Kubernetes cluster internal routing
+############################################
+
+# Expects kubectl being configured on the local machine
+# using kubectl.yaml playbook
+
+# 1) Infer the routing mapping for the Pod cluster
+#   kubectl get nodes  --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}'
+# 2) Set additional routes on every worker
+#   e.g.  route add -net 10.200.0.0 netmask 255.255.255.0 gw 10.43.0.31 metric 1
+
+- hosts: worker
+
+  tasks:
+
+  # Run kuberctl on local machine to gather kubernetes nodes "facts"
+  - name: Gather Kubernetes nodes facts (on localhost)
+    local_action: command kubectl get nodes --output=json
+    register: result
+  - set_fact:
+      kubernetes_nodes: "{{ result.stdout | from_json }}"
+
+  # Extract Pod addresses
+  #   The following is an hack to extract the list of addresses from kubernetes facts,
+  #   as Jinja2 doesn't support list comprehension (list flattening)
+  - debug: msg="Extract Kubernetes node addresses"
+    with_flattened:
+      - "{{ kubernetes_nodes['items']|map(attribute='status')|map(attribute='addresses')|list }}"
+    register: node_addresses_tmp
+    # no_log: True
+  - set_fact:
+     kubernetes_nodes_addresses: "{{ node_addresses_tmp.results|map(attribute='item')|selectattr('type','equalto','InternalIP')|map(attribute='address')|list }}"
+#  - debug: var=kubernetes_nodes_addresses
+
+  # Extract Pod CIDRs
+  - set_fact:
+      kubernetes_pod_cidrs: "{{ kubernetes_nodes['items']|map(attribute='spec')|map(attribute='podCIDR')|list }}"
+#  - debug: var=kubernetes_pod_cidrs
+
+  - name: Add pod routes
+    command: "route add -net {{ item.0|ipaddr('network') }} netmask {{ item.0|ipaddr('netmask') }} gw {{ item.1|ipaddr('address') }} metric 1"
+    with_together:
+      - "{{ kubernetes_pod_cidrs }}"
+      - "{{ kubernetes_nodes_addresses }}"
+    ignore_errors: true # The route command fails if the route already exists
+    become: true
+
+  - name: Verify routes
+    command: "route -n"
+    become: true
+    register: result
+
+  - assert:
+      that: # TODO Make assertions more strict
+        - "'{{ kubernetes_pod_cidrs[0]|ipaddr('network') }}' in result.stdout"
+        - "'{{ kubernetes_pod_cidrs[1]|ipaddr('network') }}' in result.stdout"
+        - "'{{ kubernetes_pod_cidrs[2]|ipaddr('network') }}' in result.stdout"
+        - "'{{ kubernetes_nodes_addresses[0] }}' in result.stdout"
+        - "'{{ kubernetes_nodes_addresses[1] }}' in result.stdout"
+        - "'{{ kubernetes_nodes_addresses[2] }}' in result.stdout"

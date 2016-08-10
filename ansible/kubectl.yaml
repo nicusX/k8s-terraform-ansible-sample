@@ -1,0 +1,42 @@
+---
+###########################
+# Setup Kubernetes client
+###########################
+
+# Expects `kubernetes_api_endpoint` to be defined passed in
+# as `--extra-vars "kubernetes_api_endpoint=xxxx"`
+
+- hosts: 127.0.0.1
+  connection: local
+
+  vars:
+    kubernetes_api_endpoint_port: 6443
+    kubernetes_cluster_name: "kubernetes-not-the-hardest-way"
+    certificate_path: "{{ playbook_dir }}/../cert"
+
+    # Credentials must match those defined in templates/var/lib/kubernetes/token.csv
+    kubectl_user: admin
+    kubectl_token: chAng3m3
+
+
+  tasks:
+
+  - name: Check certificate file
+    stat:
+      path: "{{ certificate_path }}/ca.pem"
+    register: cert
+
+  - assert:
+      that: "cert.stat.exists == True"
+
+  - name: Set kubectl endpoint
+    shell: "kubectl config set-cluster {{ kubernetes_cluster_name }} --certificate-authority={{ certificate_path }}/ca.pem --embed-certs=true --server=https://{{ kubernetes_api_endpoint }}:{{ kubernetes_api_endpoint_port }}"
+
+  - name: Set kubectl credentials
+    shell: "kubectl config set-credentials {{ kubectl_user }} --token {{ kubectl_token }}"
+
+  - name: Set kubectl default context
+    shell: "kubectl config set-context default-context --cluster={{ kubernetes_cluster_name }} --user={{ kubectl_user }}"
+
+  - name: Switch kubectl to default context
+    shell: "kubectl config use-context default-context"

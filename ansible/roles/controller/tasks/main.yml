@@ -1,0 +1,99 @@
+---
+####################
+# Load Certificates
+####################
+
+- name: Create kubernetes data dir
+  file: path=/var/lib/kubernetes state=directory
+  become: true
+
+- name: Copy certificates
+  copy:
+    src: "{{ playbook_dir }}/../cert/{{ item }}"
+    dest: /var/lib/kubernetes
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - ca.pem
+    - kubernetes.pem
+    - kubernetes-key.pem
+  become: true
+
+
+#############
+# Kubernetes
+#############
+
+- name: Download Kuberneters controller binaries
+  get_url:
+    url: "{{ kubernetes_download_path }}/{{ item }}"
+    dest: /usr/bin
+    owner: root
+    group: root
+    mode: 0755
+    # TODO Add hash check
+  with_items:
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+    - kubectl
+  become: true
+
+- name: Copy Authentication and Authorisation files
+  copy:
+    src: "{{ item }}"
+    dest: /var/lib/kubernetes
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - token.csv
+    - authorization-policy.jsonl
+  become: true
+
+- name: Add kube-* systemd unit
+  template:
+    src: "{{ item }}.service.j2"
+    dest: /etc/systemd/system/{{ item }}.service
+    mode: 700
+  with_items:
+    - kube-controller-manager
+    - kube-apiserver
+    - kube-scheduler
+  become: true
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  become: true
+
+- name: Enable kube-* services
+  command: "systemctl enable {{ item }}"
+  with_items:
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+  become: true
+
+- name: Restart kube-* services
+  service:
+    name: "{{ item }}"
+    state: restarted
+    enabled: yes
+  with_items:
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+  become: true
+
+- name: Verify Kubernetes status
+  shell: kubectl get componentstatuses
+  register: cmd_result
+
+- assert:
+    that:
+      - "'scheduler            Healthy' in cmd_result.stdout"
+      - "'controller-manager   Healthy' in cmd_result.stdout"
+      - "'etcd-0               Healthy' in cmd_result.stdout"
+      - "'etcd-1               Healthy' in cmd_result.stdout"
+      - "'etcd-2               Healthy' in cmd_result.stdout"

@@ -1,0 +1,141 @@
+---
+
+####################
+# Load Certificates
+####################
+
+- name: Create kubernetes data dir
+  file: path=/var/lib/kubernetes state=directory
+  become: true
+
+- name: Copy certificates
+  copy:
+    src: "{{ playbook_dir }}/../cert/{{ item }}"
+    dest: /var/lib/kubernetes
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - ca.pem
+    - kubernetes.pem
+    - kubernetes-key.pem
+  become: true
+
+#########
+# Docker
+#########
+
+- name: Download docker binaries
+  get_url:
+    url: "{{ docker_download_url }}"
+    dest: "/usr/local/src"
+    # TODO Add hash check
+  become: true
+
+- name: Unpack docker binaries
+  unarchive:
+    copy: no
+    src: "/usr/local/src/{{ docker_package_file }}"
+    dest: "/usr/local/src/"
+    creates: "/local/src/docker/docker"
+  become: true
+
+- name: Copy docker binaries
+  copy:
+    remote_src: true
+    src: "/usr/local/src/docker/{{ item }}"
+    dest: /usr/bin
+    mode: 0755
+  with_items: # Remote-to-remote copy doesn't support file glob yet
+    - docker
+    - docker-containerd
+    - docker-containerd-ctr
+    - docker-containerd-shim
+    - docker-runc
+  become: true
+
+- name: Add docker systemd unit
+  template:
+    src: docker.service.j2
+    dest: /etc/systemd/system/docker.service
+    mode: 700
+  become: true
+  notify:
+    - Reload systemd
+    - Enable docker service
+    - Restart docker service
+
+
+###########
+# Kubelet
+###########
+
+- name: Create CNI dir
+  file: path=/opt/cni state=directory
+  become: true
+
+- name: Download CNI binaries
+  get_url:
+    url: "{{ cni_download_url }}"
+    dest: "/usr/local/src"
+    # TODO Add hash check
+  become: true
+
+- name: Unpack CNI binaries
+  unarchive:
+    copy: no
+    src: "/usr/local/src/{{ cni_package_file }}"
+    dest: "/opt/cni/"
+    creates: "/opt/cni/bin/cnitool"
+  become: true
+
+- name: Create Kubelet directory
+  file: path=/var/lib/kubelet state=directory
+  become: true
+
+- name: Download Kubelets binaries
+  get_url:
+    url: "{{ kubelet_download_path}}/{{ item }}"
+    dest: "/usr/bin"
+    group: root
+    owner: root
+    mode: 0755
+    # TODO Add hash check
+  with_items:
+    - kubectl
+    - kube-proxy
+    - kubelet
+  become: true
+
+- name: Add Kubelet configuration
+  template:
+    src: kubeconfig.j2
+    dest: /var/lib/kubelet/kubeconfig
+    mode: 644
+  become: true
+
+- name: Add kubelet systemd unit
+  template:
+    src: kubelet.service.j2
+    dest: /etc/systemd/system/kubelet.service
+    mode: 700
+  become: true
+  notify:
+    - Reload systemd
+    - Enable kubelet service
+    - Restart kubelet service
+
+#############
+# Kube-proxy
+#############
+
+- name: Add kube-proxy systemd unit
+  template:
+    src: kube-proxy.service.j2
+    dest: /etc/systemd/system/kube-proxy.service
+    mode: 700
+  become: true
+  notify:
+    - Reload systemd
+    - Enable kube-proxy service
+    - Restart kube-proxy service

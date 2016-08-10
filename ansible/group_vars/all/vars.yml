@@ -1,0 +1,5 @@
+---
+
+kubernetes_service_cluster_cidr: "10.32.0.0/24"
+kubernetes_pod_cluster_cidr: "10.200.0.0/16"
+kubernetes_cluster_dns: "10.32.0.10"

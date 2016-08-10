@@ -1,0 +1,38 @@
+---
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  become: true
+
+- name: Enable docker service
+  command: systemctl enable docker
+  become: true
+
+- name: Enable kubelet service
+  command: systemctl enable kubelet
+  become: true
+
+- name: Enable kube-proxy service
+  command: systemctl enable kube-proxy
+  become: true
+
+- name: Restart docker service
+  service:
+    name: docker
+    state: restarted
+    enabled: yes
+  become: true
+
+- name: Restart kubelet service
+  service:
+    name: kubelet
+    state: restarted
+    enabled: yes
+  become: true
+
+- name: Restart kube-proxy service
+  service:
+    name: kube-proxy
+    state: restarted
+    enabled: yes
+  become: true

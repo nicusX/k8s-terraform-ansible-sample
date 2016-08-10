@@ -1,0 +1,17 @@
+---
+
+#######################
+# Setup infrastructure
+#######################
+
+- hosts: etcd
+  roles:
+    - etcd
+
+- hosts: controller
+  roles:
+    - controller
+
+- hosts: worker
+  roles:
+    - worker

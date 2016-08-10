@@ -1,0 +1,20 @@
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+
+[Service]
+ExecStart=/usr/bin/kube-controller-manager \
+  --allocate-node-cidrs=true \
+  --cluster-cidr={{ kubernetes_pod_cluster_cidr }} \
+  --cluster-name=kubernetes \
+  --leader-elect=true \
+  --master=http://{{ ansible_eth0.ipv4.address }}:8080 \
+  --root-ca-file=/var/lib/kubernetes/ca.pem \
+  --service-account-private-key-file=/var/lib/kubernetes/kubernetes-key.pem \
+  --service-cluster-ip-range={{ kubernetes_service_cluster_cidr }} \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,82 @@
+---
+
+- name: Create etcd config dir
+  file: path=/etc/etcd state=directory
+  become: true
+
+- name: Copy certificates
+  copy:
+    src: "{{ playbook_dir }}/../cert/{{ item }}"
+    dest: "/etc/etcd/"
+    owner: root
+    group: root
+    mode: 0644
+  become: true
+  with_items:
+    - ca.pem
+    - kubernetes.pem
+    - kubernetes-key.pem
+
+- name: Download etcd binaries
+  get_url:
+    url: "{{ etcd_download_url }}"
+    dest: "/usr/local/src"
+    # TODO Add hash check
+  become: true
+
+- name: Unpack etcd binaries
+  unarchive:
+    copy: no
+    src: "/usr/local/src/{{ etcd_release }}.tar.gz"
+    dest: "/usr/local/src/"
+    creates: "/usr/local/src/{{ etcd_release }}/etcd"
+  become: true
+
+- name: Copy etcd binaries
+  copy:
+    remote_src: true
+    src: "/usr/local/src/{{ etcd_release }}/{{ item }}"
+    dest: "/usr/bin"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - etcd
+    - etcdctl
+  become: true
+
+- name: Create etcd data dir
+  file: path=/var/lib/etcd state=directory
+  become: true
+
+- name: Add etcd systemd unit
+  template:
+    src: etcd.service.j2
+    dest: /etc/systemd/system/etcd.service
+    mode: 700
+  become: true
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  become: true
+
+- name: Enable etcd service
+  command: systemctl enable etcd
+  become: true
+
+- name: Restart etcd
+  service:
+    name: etcd
+    state: restarted
+    enabled: yes
+  become: true
+
+- name: Wait for etcd listening
+  wait_for: port=2379 timeout=60
+
+- name: Verify etcd cluster health
+  shell: etcdctl --ca-file=/etc/etcd/ca.pem cluster-health
+  register: cmd_result
+  until: cmd_result.stdout.find("cluster is healthy") != -1
+  retries: 5
+  delay: 5

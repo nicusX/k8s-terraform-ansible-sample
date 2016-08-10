@@ -1,0 +1,5 @@
+---
+  
+etcd_version: "v3.0.1"
+etcd_release: "etcd-{{ etcd_version }}-linux-amd64"
+etcd_download_url: "https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/{{ etcd_release }}.tar.gz"

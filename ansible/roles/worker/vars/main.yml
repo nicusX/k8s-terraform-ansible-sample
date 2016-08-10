@@ -1,0 +1,9 @@
+---
+
+docker_version: "1.11.2"
+docker_package_file: "docker-{{ docker_version }}.tgz"
+docker_download_url: "https://get.docker.com/builds/Linux/x86_64/{{ docker_package_file }}"
+cni_package_file: "cni-c864f0e1ea73719b8f4582402b0847064f9883b0.tar.gz"
+cni_download_url: "https://storage.googleapis.com/kubernetes-release/network-plugins/{{ cni_package_file }}"
+kubernetes_version: "v1.3.0"
+kubelet_download_path: "https://storage.googleapis.com/kubernetes-release/release/{{ kubernetes_version }}/bin/linux/amd64"
