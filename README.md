@@ -3,6 +3,10 @@
 The goal of this sample project is provisioning AWS infrastructure and Kubernetes cluster, using Terraform and Ansible.
 This is not meant to be production-ready, but to provide a realistic example, beyond the usual "Hello, world" ones.
 
+Please refer to the companion blog posts: https://opencredo.com/kubernetes-aws-terraform-ansible-1/ ‎
+
+### Target platform
+
 The setup is based on [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way). This project follows the same steps, but translating from Google Cloud to AWS and making them automatic, with Terraform and Ansible.
 
 Infrastructure includes:
