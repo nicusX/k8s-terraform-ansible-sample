@@ -45,14 +45,23 @@ Requirements on control machine:
 - Kubernetes CLI: `brew install Kubernetes-cli`
 - SSH Agent: already running
 
+### Linux installation
+
+The same as OSX, except you will use the packager manager of the distribution you are using.
+Remember Ansible requires Python 2.5+ and is not compatible with Python 3.
+
+### Windows installation
+
+Seriously? ;)
+
 
 ## Credentials
 
 ### AWS Keypair
 
-The easiest way to generate keypairs is using AWS console. This also creates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
+The easiest way to generate key-pairs is using AWS console. This also creates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
 
-**The keypair must be already loaded in AWS.**
+**The key-pair must be already loaded in AWS.**
 **The identity file must be downloaded on the machine running Terraform and Ansible.**
 The keypair name must be specified as part of the environment (see below).
 
@@ -87,7 +96,7 @@ You may either set a `TF_VAR_<var-name>` environment variables for each of them,
 
 Example of `environment.tfvars`:
 ```
-default_keypair_name = "lorenzo-glf"
+default_keypair_name = "lorenzo-oc"
 control_cidr = "123.45.67.89/32"
 vpc_name = "Lorenzo Kubernetes"
 elb_name = "lorenzo-kubernetes"
