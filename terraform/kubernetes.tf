@@ -216,7 +216,6 @@ resource "aws_elb" "kubernetes_api" {
 ## Security
 ############
 
-# TODO This Security Group get regenerated at every Terraform run, even when no change
 resource "aws_security_group" "kubernetes" {
   vpc_id = "${aws_vpc.kubernetes.id}"
   name = "kubernetes"
@@ -242,7 +241,7 @@ resource "aws_security_group" "kubernetes" {
     from_port = 0
     to_port = 0
     protocol = "-1"
-    self = true
+    cidr_blocks = ["${var.control_cidr}"]
   }
 
   # Allow all traffic from the API ELB
