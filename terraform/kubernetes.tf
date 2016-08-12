@@ -241,7 +241,7 @@ resource "aws_security_group" "kubernetes" {
     from_port = 0
     to_port = 0
     protocol = "-1"
-    cidr_blocks = ["${var.control_cidr}"]
+    cidr_blocks = ["${var.vpc_cidr}"]
   }
 
   # Allow all traffic from the API ELB
