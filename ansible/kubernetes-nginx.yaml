@@ -19,8 +19,6 @@
   - name: Expose nginx
     command: "kubectl expose deployment nginx --type NodePort"
 
-  - debug: msg="hello"
-
   - name: Get exposed port
     command: "kubectl get svc nginx --output=jsonpath='{range .spec.ports[0]}{.nodePort}'"
     register: result
