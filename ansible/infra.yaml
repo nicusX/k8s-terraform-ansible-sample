@@ -6,12 +6,15 @@
 
 - hosts: etcd
   roles:
+    - common
     - etcd
 
 - hosts: controller
   roles:
+    - common
     - controller
 
 - hosts: worker
   roles:
+    - common
     - worker
