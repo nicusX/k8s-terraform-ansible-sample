@@ -57,10 +57,6 @@ variable default_instance_type {
   default = "t2.micro"
 }
 
-variable install_python_command {
-  default = "sudo apt-get -y -qq install python"
-}
-
 variable kubernetes_cluster_dns {
   default = "10.31.0.1"
 }

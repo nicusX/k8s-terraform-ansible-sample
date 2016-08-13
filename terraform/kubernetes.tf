@@ -69,7 +69,7 @@ resource "aws_route_table_association" "kubernetes" {
 ## Instances
 ############
 
-# etcd nodes
+# etcd cluster
 resource "aws_instance" "etcd" {
     count = 3
     ami = "${var.default_ami}"
@@ -90,22 +90,10 @@ resource "aws_instance" "etcd" {
       ansibleNodeType = "etcd"
       ansibleNodeName = "etcd${count.index}"
     }
-
-    # Install Python 2
-    # Add private DNS hostname to /etc/hosts (may not work on distro different from Ubuntu)
-    provisioner "remote-exec" {
-      inline = ["${var.install_python_command}"]
-//      inline = ["${var.install_python_command}", "sudo sed -i \"1c127.0.0.1 localhost ${self.private_dns}\" /etc/hosts", "sudo hostname ${self.private_dns}"]
-      connection {
-        user = "${var.default_instance_user}"
-        host = "${self.public_ip}"
-        agent = true
-      }
-    }
 }
 
 
-# Kubernetes Controller nodes
+# Kubernetes Controllers
 resource "aws_instance" "controller" {
 
     count = 3
@@ -128,20 +116,9 @@ resource "aws_instance" "controller" {
       ansibleNodeType = "controller"
       ansibleNodeName = "controller${count.index}"
     }
-
-    # Install Python 2
-    # Add private DNS hostname to /etc/hosts (may not work on distro different from Ubuntu)
-    provisioner "remote-exec" {
-      inline = ["${var.install_python_command}"]
-      connection {
-        user = "${var.default_instance_user}"
-        host = "${self.public_ip}"
-        agent = true
-      }
-    }
 }
 
-# Kubernetes Worker nodes
+# Kubernetes Workers
 resource "aws_instance" "worker" {
     count = 3
     ami = "${var.default_ami}"
@@ -162,17 +139,6 @@ resource "aws_instance" "worker" {
       ansibleFilter = "${var.ansibleFilter}"
       ansibleNodeType = "worker"
       ansibleNodeName = "worker${count.index}"
-    }
-
-    # Install Python 2
-    # Add private DNS hostname to /etc/hosts (may not work on distro different from Ubuntu)
-    provisioner "remote-exec" {
-      inline = ["${var.install_python_command}"]
-      connection {
-        user = "${var.default_instance_user}"
-        host = "${self.public_ip}"
-        agent = true
-      }
     }
 }
 

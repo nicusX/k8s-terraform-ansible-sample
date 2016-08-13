@@ -1,7 +1,18 @@
 ---
+#####################
+# Install Python
+#####################
+
+- hosts: all
+  gather_facts: false # As Python is not yet installed, we cannot gather host facts
+
+  tasks:
+    - name: Install Python
+      raw: "apt-get -y -q install python"
+      become: true
 
 #######################
-# Setup infrastructure
+# Setup K8s components
 #######################
 
 - hosts: etcd
