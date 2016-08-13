@@ -89,6 +89,8 @@
 - name: Verify Kubernetes status
   shell: kubectl get componentstatuses
   register: cmd_result
+  retries: 5
+  delay: 10
 
 - assert:
     that:
