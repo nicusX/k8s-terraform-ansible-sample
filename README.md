@@ -7,15 +7,14 @@ Please refer to the companion blog posts: https://opencredo.com/kubernetes-aws-t
 
 ### Target platform
 
-The setup is based on [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way). This project follows the same steps, but translating from Google Cloud to AWS and making them automatic, with Terraform and Ansible.
+The setup is based on [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way). This project follows the same steps (except installing DNS add-on), but translating from Google Cloud to AWS and making them automatic, with Terraform and Ansible.
 
 Infrastructure includes:
 
 - AWS VPC
-- 3 nodes HA Kubernetes Control Plane: Kubernetes API, Scheduler and Controller Manager
-- 3 nodes HA etcd cluster
-- 3 Kubernetes minion (worker) nodes
-- Kubernetes DNS plugin
+- 3 instances for HA Kubernetes Control Plane: Kubernetes API, Scheduler and Controller Manager
+- 3 instances for HA etcd cluster
+- 3 Kubernetes worker instances (minion, nodes)
 - CNI based networking
 - Sample *nginx* service will be deployed, to check everything works
 
@@ -83,7 +82,7 @@ ssh-add <keypair-name>.pem
 Before running Terraform, you MUST set some variables defining the environment.
 
 - `default_keypair_name`: AWS KeyPair name for all instances. The KeyPair must be already loaded in AWS (mandatory)
-- `control_cidr`: The CIDR of your IP. All nodes will accept only traffic from this address only. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
+- `control_cidr`: The CIDR of your IP. All instances will accept only traffic from this address only. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
 - `vpc_name`: VPC Name. Must be unique in the AWS Account (Default: "kubernetes")
 - `elb_name`: ELB Name for Kubernetes API. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "kubernetes")
 - `owner`: `Owner` tag added to all AWS resources. No functional use. This is useful if you are sharing the same AWS account with others, to quickly filter your resources on AWS console. (Default: "kubernetes")
@@ -140,7 +139,7 @@ Take note of both DNS name and workers IP addresses. You will need them later (t
 
 ### Generated SSH config
 
-Terraform also generates `ssh.cfg` file locally, containing the aliases for accessing all the nodes by name (`controller0..2`, `etcd0..2`, `worker0..2`).
+Terraform also generates `ssh.cfg` file locally, containing the aliases for accessing all VMs by name (`controller0..2`, `etcd0..2`, `worker0..2`).
 
 e.g. to access instance `worker0`
 ```
@@ -200,29 +199,7 @@ Set up additional routes for routing traffic between inside Pods cluster.
 > ansible-playbook kubernetes-routing.yaml
 ```
 
-### Setup Kubernetes DNS add-on
-
-Install DNS add-on.
-
-```
-> ansible-playbook kubernetes-dns.yaml
-```
-
-#### Verify DNS plugin is working
-
-Use Kubernetes CLI (`kubectl`) to verify the system service is up and running.
-
-```
-> kubectl --namespace=kube-system get svc
-NAME       CLUSTER-IP   EXTERNAL-IP   PORT(S)         AGE
-kube-dns   10.32.0.10   <none>        53/UDP,53/TCP   15m
-
-> kubectl --namespace=kube-system get pods
-NAME                 READY     STATUS    RESTARTS   AGE
-kube-dns-v18-79maa   3/3       Running   0          41s
-kube-dns-v18-bcs1f   3/3       Running   0          41s
-```
-### Deploy nginx service
+### Smoke test: Deploy nginx service
 
 Deploy a ngnix service inside Kubernetes.
 
@@ -258,7 +235,7 @@ Retrieve the port nginx has been exposed on:
 32700
 ```
 
-This port is exposed on each worker (minion) node of the cluster (refer to Terraform output for workers public IP addresses).
+This port is exposed on each worker (node, minion) of the cluster (refer to Terraform output for workers public IP addresses).
 
 Now you should be able to access the nginx default page:
 ```
@@ -274,14 +251,14 @@ Now you should be able to access the nginx default page:
 
 There are some known simplifications, compared to a production-ready solution:
 
-- Networking setup is very simple: ALL nodes have a public IP (though only accessible from a configurable Control IP).
-- Not a proper High Availability setup: all nodes are in the same Availability Zone; no internal load balancer for the Kubernetes master.
-- Infrastructure managed by direct SSH into nodes (no VPN, no Bastion).
+- Networking setup is very simple: ALL instances have a public IP (though only accessible from a configurable Control IP).
+- Not a proper High Availability setup: all instances are in the same Availability Zone; no internal load balancer for the Kubernetes master.
+- Infrastructure managed by direct SSH into instances (no VPN, no Bastion).
 - Exposed Kubernetes NodePorts are accessible from the Control IP only.
 - Very basic Service Account and Secret (to change them: `./ansible/roles/controller/files/token.csv`)
 - No Load Balancer for the exposed NodePorts.
 - No DNS
 - No support for Kubernetes logging
 - Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
-- Nodes have static private IP addresses. This allows nodes restarted by any external agent to rejoin the cluster without further actions (using internal DNS would allow to use dynamic IP without issues)
-- All nodes use Ubuntu (16.04), possibly not the most advisable distribution for production
+- Instances have static private IP addresses. This allows VM restarted by any external agent to rejoin the cluster without further actions (using internal DNS would allow to use dynamic IP without issues)
+- All instances use Ubuntu (16.04), possibly not the most advisable distribution for production
