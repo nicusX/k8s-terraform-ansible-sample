@@ -7,7 +7,7 @@ Please refer to the companion blog posts: https://opencredo.com/kubernetes-aws-t
 
 ### Target platform
 
-The setup is based on [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way). This project follows the same steps (except installing DNS add-on), but translating from Google Cloud to AWS and making them automatic, with Terraform and Ansible.
+The setup is based on [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way). This project follows the same steps (except installing DNS add-on), translated from Google Cloud to AWS and made automatic.
 
 Infrastructure includes:
 
@@ -15,11 +15,11 @@ Infrastructure includes:
 - 3 instances for HA Kubernetes Control Plane: Kubernetes API, Scheduler and Controller Manager
 - 3 instances for HA etcd cluster
 - 3 Kubernetes worker instances (minion, nodes)
-- CNI based networking
-- Sample *nginx* service will be deployed, to check everything works
+- Kubenet Pod networking (using CNI)
+- Sample *nginx* service deployed to check everything works
 
 
-Still, there are some known simplifications, compared to a production-ready solution (See "Known simplifications", below)
+There are many known simplifications, compared to a production-ready solution (See "Known simplifications", below)
 
 
 ## Requirements
@@ -58,11 +58,12 @@ Seriously? ;)
 
 ### AWS Keypair
 
-The easiest way to generate key-pairs is using AWS console. This also creates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
+The easiest way to generate key-pairs is using AWS console. This creates the identity file (`.pem`) in the correct format for AWS.
 
 **The key-pair must be already loaded in AWS.**
 **The identity file must be downloaded on the machine running Terraform and Ansible.**
-The keypair name must be specified as part of the environment (see below).
+
+The key-pair name must be specified as part of the environment setup (see below).
 
 ### Terraform and Ansible authentication
 
@@ -81,7 +82,7 @@ ssh-add <keypair-name>.pem
 
 Before running Terraform, you MUST set some variables defining the environment.
 
-- `default_keypair_name`: AWS KeyPair name for all instances. The KeyPair must be already loaded in AWS (mandatory)
+- `default_keypair_name`: AWS key-pair name for all instances. The key-Pair must be already loaded in AWS (mandatory)
 - `control_cidr`: The CIDR of your IP. All instances will accept only traffic from this address only. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
 - `vpc_name`: VPC Name. Must be unique in the AWS Account (Default: "kubernetes")
 - `elb_name`: ELB Name for Kubernetes API. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "kubernetes")
@@ -124,7 +125,7 @@ You also have to **manually** modify the `./ansible/hosts/ec2.ini`, changing `re
 (if you are setting up the environment using `TF_VAR_*` env variable, you may omit `-var-file=environment.tfvars`)
 
 
-Terraform outputs the DNS name to access Kubernetes API and Workers public IP.
+Terraform outputs the public DNS name to access Kubernetes API and Workers public IP.
 e.g.
 ```
 Apply complete! Resources: 12 added, 2 changed, 0 destroyed.
@@ -145,7 +146,7 @@ e.g. to access instance `worker0`
 ```
 > ssh -F ssh.cfg worker0
 ```
-This configuration file is for direct connection to instances only. It is NOT used by Ansible.
+This configuration file is useful for directly SSH into machines. It is NOT used by Ansible.
 
 
 ## Install Kubernetes with Ansible
@@ -162,7 +163,7 @@ Install Kubernetes services and etcd.
 ### Setup Kubernetes CLI
 
 This step set up the Kubernetes CLI (`kubectl`) configuration on the control machine.
-Configuration includes the DNS name of the Kubernetes API, as returned by Terraform.
+Configuration includes the DNS name of Kubernetes API endpoint, as returned by Terraform.
 
 These configuration is required to run following steps that uses Kubernetes CLI.
 
@@ -235,7 +236,7 @@ Retrieve the port nginx has been exposed on:
 32700
 ```
 
-This port is exposed on each worker (node, minion) of the cluster (refer to Terraform output for workers public IP addresses).
+This port is exposed on each worker (node, minion). Refer to Terraform output for workers public IP addresses.
 
 Now you should be able to access the nginx default page:
 ```
@@ -252,13 +253,12 @@ Now you should be able to access the nginx default page:
 There are some known simplifications, compared to a production-ready solution:
 
 - Networking setup is very simple: ALL instances have a public IP (though only accessible from a configurable Control IP).
-- Not a proper High Availability setup: all instances are in the same Availability Zone; no internal load balancer for the Kubernetes master.
 - Infrastructure managed by direct SSH into instances (no VPN, no Bastion).
 - Exposed Kubernetes NodePorts are accessible from the Control IP only.
-- Very basic Service Account and Secret (to change them: `./ansible/roles/controller/files/token.csv`)
+- Very basic Service Account and Secret (to change them, modify: `./ansible/roles/controller/files/token.csv` and `./ansible/roles/worker/tenplates/kubeconfig.j2`)
 - No Load Balancer for the exposed NodePorts.
-- No DNS
+- No fixed DNS names
 - No support for Kubernetes logging
-- Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
+- Simplified Ansible lifecycle. Playbooks support changes in a simplistic way, including possibly unnecessary restarts.
 - Instances have static private IP addresses. This allows VM restarted by any external agent to rejoin the cluster without further actions (using internal DNS would allow to use dynamic IP without issues)
-- All instances use Ubuntu (16.04), possibly not the most advisable distribution for production
+- All instances use Ubuntu (16.04)
