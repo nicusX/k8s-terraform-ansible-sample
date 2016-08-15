@@ -10,6 +10,9 @@
     - name: Install Python
       raw: "apt-get -y -q install python"
       become: true
+      retries: 10
+      delay: 20
+      # If you run this playbook immediately after Terraform, ssh may not be ready to respond yet
 
 #######################
 # Setup K8s components
