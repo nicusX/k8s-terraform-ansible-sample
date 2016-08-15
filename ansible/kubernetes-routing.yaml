@@ -30,7 +30,7 @@
     with_flattened:
       - "{{ kubernetes_nodes['items']|map(attribute='status')|map(attribute='addresses')|list }}"
     register: node_addresses_tmp
-    # no_log: True
+    no_log: True
   - set_fact:
      kubernetes_nodes_addresses: "{{ node_addresses_tmp.results|map(attribute='item')|selectattr('type','equalto','InternalIP')|map(attribute='address')|list }}"
 #  - debug: var=kubernetes_nodes_addresses
@@ -61,3 +61,9 @@
         - "'{{ kubernetes_nodes_addresses[0] }}' in result.stdout"
         - "'{{ kubernetes_nodes_addresses[1] }}' in result.stdout"
         - "'{{ kubernetes_nodes_addresses[2] }}' in result.stdout"
+
+  # VPC knows nothing about our Pod subnet and we must avoid internal traffic being routed as outbound Internet traffic
+  # For explaination, see: http://kubernetes.io/docs/admin/networking/#google-compute-engine-gce
+  - name: Add iptable rule to masquerade traffic bound outside VPC CIDR
+    command: "iptables -t nat -A POSTROUTING ! -d {{ vpc_cidr }} -o eth0 -j MASQUERADE"
+    become: true
