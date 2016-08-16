@@ -65,5 +65,5 @@
   # VPC knows nothing about our Pod subnet and we must avoid internal traffic being routed as outbound Internet traffic
   # For explaination, see: http://kubernetes.io/docs/admin/networking/#google-compute-engine-gce
   - name: Add iptable rule to masquerade traffic bound outside VPC CIDR
-    command: "iptables -t nat -A POSTROUTING ! -d {{ vpc_cidr }} -o eth0 -j MASQUERADE"
+    command: "iptables -t nat -A POSTROUTING ! -d {{ internal_cidr }} -o eth0 -j MASQUERADE"
     become: true
