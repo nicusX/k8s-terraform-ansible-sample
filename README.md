@@ -1,7 +1,7 @@
 # Kubernetes not the hardest way (or "Provisioning a Kubernetes Cluster on AWS using Terraform and Ansible")
 
 The goal of this sample project is provisioning AWS infrastructure and Kubernetes cluster, using Terraform and Ansible.
-This is not meant to be production-ready, but to provide a realistic example, beyond the usual "Hello, world" ones.
+It is not meant to be production-ready, but to provide a realistic example, beyond the usual "Hello, world" ones.
 
 Please refer to the companion blog posts: https://opencredo.com/kubernetes-aws-terraform-ansible-1/ ‎
 
@@ -46,7 +46,7 @@ Requirements on control machine:
 
 ### Linux installation
 
-The same as OSX, except you will use the packager manager of the distribution you are using.
+The same as OSX, except you will use the package manager of the distribution you are using.
 Remember Ansible requires Python 2.5+ and is not compatible with Python 3.
 
 ### Windows installation
@@ -56,18 +56,16 @@ Seriously? ;)
 
 ## Credentials
 
-### AWS Keypair
 
-The easiest way to generate key-pairs is using AWS console. This creates the identity file (`.pem`) in the correct format for AWS.
+### AWS KeyPair
 
-**The key-pair must be already loaded in AWS.**
-**The identity file must be downloaded on the machine running Terraform and Ansible.**
+You need a valid AWS Identity (`.pem`) file and Public Key. Terraform will import the [KeyPair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) and Ansible will use the Identity to SSH into the machines.
 
-The key-pair name must be specified as part of the environment setup (see below).
+Please read [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws) about supported formats.
 
 ### Terraform and Ansible authentication
 
-Both Terraform and Ansible expects AWS credentials in environment variables:
+Both Terraform and Ansible expect AWS credentials in environment variables:
 ```
 $ export AWS_ACCESS_KEY_ID=<access-key-id>
 $ export AWS_SECRET_ACCESS_KEY="<secret-key>"
@@ -80,28 +78,35 @@ $ ssh-add <keypair-name>.pem
 
 ## Setup variables defining the environment
 
-Before running Terraform, you MUST set some variables defining the environment.
+Before running Terraform, you must define set some Terraform variables:
 
-- `default_keypair_name`: AWS key-pair name for all instances. The key-Pair must be already loaded in AWS (mandatory)
 - `control_cidr`: The CIDR of your IP. All instances will accept only traffic from this address only. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
+- `default_keypair_public_key`: Valid public key corresponding to the Identity you will use to SSH into VMs. e.g. `"ssh-rsa AAA....xyz"` (mandatory)
+
+
+You may also optionally redefine these variables:
+
+- `default_keypair_name`: AWS key-pair name for all instances.  (Default: "k8s-not-the-hardest-way")
 - `vpc_name`: VPC Name. Must be unique in the AWS Account (Default: "kubernetes")
 - `elb_name`: ELB Name for Kubernetes API. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "kubernetes")
-- `owner`: `Owner` tag added to all AWS resources. No functional use. This is useful if you are sharing the same AWS account with others, to quickly filter your resources on AWS console. (Default: "kubernetes")
+- `owner`: `Owner` tag added to all AWS resources. No functional use. It useful if you are sharing the same AWS account with others, to filter your resources on AWS console. (Default: "kubernetes")
 
 
-You may either set a `TF_VAR_<var-name>` environment variables for each of them, or create a `.tfvars` file (e.g. `environment.tfvars`) and pass it as parameter to Terraform:
+
+The easiest way to do it is creating a `terraform.tfvars` [variable file](https://www.terraform.io/docs/configuration/variables.html#variable-files) in `./terraform` directory. Terraform automatically includes this file.
+
+Example of `terraform.tfvars` variable file:
 ```
-$ terraform plan -var-file=environment.tfvars
-```  
-
-Example of `environment.tfvars`:
-```
-default_keypair_name = "lorenzo-oc"
+# Mandatory
+default_keypair_public_key = "ssh-rsa AAA...zzz"
 control_cidr = "123.45.67.89/32"
-vpc_name = "Lorenzo Kubernetes"
-elb_name = "lorenzo-kubernetes"
+# Optional
+default_keypair_name = "lorenzo-glf"
+vpc_name = "Lorenzo ETCD"
+elb_name = "lorenzo-etcd"
 owner = "Lorenzo"
 ```
+
 
 ### Changing AWS Region
 
@@ -111,18 +116,18 @@ To use a different Region, you have to change two additional Terraform variables
 
 - `region`: AWS Region (default: "eu-west-1"). Also see "Changing AWS Region", below.
 - `zone`: AWS Availability Zone, in the selected Region (default: "eu-west-1a")
-- `default_ami`: Choose an AMI with Unbuntu 16.04 LTS HVM, EBS-SSD, available in the new Region
+- `default_ami`: Choose an AMI with Ubuntu 16.04 LTS HVM, EBS-SSD, available in the new Region
 
 You also have to **manually** modify the `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
 ## Provision infrastructure with Terraform
 
-(run Terraform commands from `./terraform` subdirectory)
+Run Terraform commands from `./terraform` subdirectory
 
 ```
-$ terraform apply -var-file=environment.tfvars
+$ terraform plan
+$ terraform apply
 ```
-(if you are setting up the environment using `TF_VAR_*` env variable, you may omit `-var-file=environment.tfvars`)
 
 
 Terraform outputs the public DNS name to access Kubernetes API and Workers public IP.
@@ -142,16 +147,17 @@ Take note of both DNS name and workers IP addresses. You will need them later (t
 
 Terraform also generates `ssh.cfg` file locally, containing the aliases for accessing all VMs by name (`controller0..2`, `etcd0..2`, `worker0..2`).
 
+This configuration file is useful for directly SSH into machines. It is NOT used by Ansible.
+
 e.g. to access instance `worker0`
 ```
 $ ssh -F ssh.cfg worker0
 ```
-This configuration file is useful for directly SSH into machines. It is NOT used by Ansible.
 
 
 ## Install Kubernetes with Ansible
 
-(run all Ansible commands from `./ansible` subdirectory)
+Run Ansible commands from `./ansible` subdirectory.
 
 ### Install and set up Kubernetes cluster
 
@@ -163,9 +169,7 @@ $ ansible-playbook infra.yaml
 ### Setup Kubernetes CLI
 
 This step set up the Kubernetes CLI (`kubectl`) configuration on the control machine.
-Configuration includes the DNS name of Kubernetes API endpoint, as returned by Terraform.
-
-These configuration is required to run following steps that uses Kubernetes CLI.
+The configuration includes the DNS name of Kubernetes API endpoint, as returned by Terraform.
 
 ```
 $ ansible-playbook kubectl.yaml --extra-vars "kubernetes_api_endpoint=<kubernetes-api-dns-name>"
@@ -254,7 +258,7 @@ There are some known simplifications, compared to a production-ready solution:
 
 - Networking setup is very simple: ALL instances have a public IP (though only accessible from a configurable Control IP).
 - Infrastructure managed by direct SSH into instances (no VPN, no Bastion).
-- Very basic Service Account and Secret (to change them, modify: `./ansible/roles/controller/files/token.csv` and `./ansible/roles/worker/tenplates/kubeconfig.j2`)
+- Very basic Service Account and Secret (to change them, modify: `./ansible/roles/controller/files/token.csv` and `./ansible/roles/worker/templates/kubeconfig.j2`)
 - No Load Balancer for the exposed NodePorts. No Load Balancer
 - No fixed internal or external DNS naming (only dynamic names generated by AWS)
 - No support for Kubernetes logging
