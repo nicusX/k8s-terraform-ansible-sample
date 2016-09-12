@@ -6,7 +6,7 @@
 # Expects `kubernetes_api_endpoint` to be defined passed in
 # as `--extra-vars "kubernetes_api_endpoint=xxxx"`
 
-- hosts: 127.0.0.1
+- hosts: localhost
   connection: local
 
   vars:
