@@ -1,4 +1,3 @@
-
 ############################
 # K8s Control Pane instances
 ############################
@@ -7,7 +6,9 @@ resource "aws_instance" "controller" {
 
     count = 3
     ami = "${var.default_ami}"
-    instance_type = "${var.default_instance_type}"
+    instance_type = "${var.controller_instance_type}"
+
+    iam_instance_profile = "${aws_iam_instance_profile.kubernetes.id}"
 
     subnet_id = "${aws_subnet.kubernetes.id}"
     private_ip = "${cidrhost(var.vpc_cidr, 20 + count.index)}"

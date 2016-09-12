@@ -12,6 +12,21 @@ resource "aws_vpc" "kubernetes" {
   }
 }
 
+# DHCP Options are not actually required, being identical to the Default Option Set
+resource "aws_vpc_dhcp_options" "dns_resolver" {
+  domain_name = "${region}.compute.internal"
+  domain_name_servers = ["AmazonProvidedDNS"]
+
+  tags {
+    Name = "${var.vpc_name}"
+    Owner = "${var.owner}"
+  }
+}
+
+resource "aws_vpc_dhcp_options_association" "dns_resolver" {
+  vpc_id ="${aws_vpc.kubernetes.id}"
+  dhcp_options_id = "${aws_vpc_dhcp_options.dns_resolver.id}"
+}
 
 ##########
 # Keypair

@@ -6,7 +6,7 @@
 resource "aws_instance" "worker" {
     count = 3
     ami = "${var.default_ami}"
-    instance_type = "${var.default_instance_type}"
+    instance_type = "${var.worker_instance_type}"
 
     subnet_id = "${aws_subnet.kubernetes.id}"
     private_ip = "${cidrhost(var.vpc_cidr, 30 + count.index)}"

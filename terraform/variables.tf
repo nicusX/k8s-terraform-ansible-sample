@@ -59,9 +59,17 @@ variable default_ami {
 variable default_instance_user {
   default = "ubuntu"
 }
-variable default_instance_type {
-  default = "t2.micro"
+
+variable etcd_instance_type {
+  default = "t2.small"
 }
+variable controller_instance_type {
+  default = "t2.small"
+}
+variable worker_instance_type {
+  default = "t2.small"
+}
+
 
 variable kubernetes_cluster_dns {
   default = "10.31.0.1"
