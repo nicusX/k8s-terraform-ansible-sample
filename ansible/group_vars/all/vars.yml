@@ -1,6 +1,8 @@
 ---
 
-internal_cidr: "10.0.0.0/8" # Includes VPC and Kubernetes subnets 
+internal_cidr: "10.0.0.0/8" # Includes VPC and Kubernetes subnets
 kubernetes_service_cluster_cidr: "10.32.0.0/24"
 kubernetes_pod_cluster_cidr: "10.200.0.0/16"
 kubernetes_cluster_dns: "10.32.0.10"
+
+kubernetes_version: "v1.3.6"
