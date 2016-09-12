@@ -1,9 +1,8 @@
 # Kubernetes not the hardest way (or "Provisioning a Kubernetes Cluster on AWS using Terraform and Ansible")
 
-This sample project wants to demonstrate how to provision a Kubernetes cluster on AWS from scratch, using Terraform and Ansible.
-Please see the companion articles https://opencredo.com/kubernetes-aws-terraform-ansible-1/ about goals, design decisions and simplifications.
+A worked example to provision a Kubernetes cluster on AWS from scratch, using Terraform and Ansible. A scripted version of the famous tutorial [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way).
 
-Our goal is deploying a Kubernetes cluster based on [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way). The original tutorial is for GCE and completely manual. We will translate it into AWS and make it (mostly) automatic.
+See the companion article https://opencredo.com/kubernetes-aws-terraform-ansible-1/ for details about goals, design decisions and simplifications.
 
 - AWS VPC
 - 3 EC2 instances for HA Kubernetes Control Plane: Kubernetes API, Scheduler and Controller Manager
