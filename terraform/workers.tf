@@ -5,7 +5,7 @@
 
 resource "aws_instance" "worker" {
     count = 3
-    ami = "${var.default_ami}"
+    ami = "${lookup(var.amis, var.region)}"
     instance_type = "${var.worker_instance_type}"
 
     subnet_id = "${aws_subnet.kubernetes.id}"

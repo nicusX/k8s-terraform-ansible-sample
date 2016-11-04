@@ -52,9 +52,20 @@ variable kubernetes_pod_cidr {
 
 
 # Instances Setup
-variable default_ami {
-  description = "Default AMI for all nodes"
-  default = "ami-1967056a" // Unbuntu 16.04 LTS HVM, EBS-SSD
+variable amis {
+  description = "Default AMIs to use for nodes depending on the region"
+  type = "map"
+  default = {
+    ap-northeast-1 = "ami-0567c164"
+    ap-southeast-1 = "ami-a1288ec2"
+    cn-north-1 = "ami-d9f226b4"
+    eu-central-1 = "ami-8504fdea"
+    eu-west-1 = "ami-0d77397e"
+    sa-east-1 = "ami-e93da085"
+    us-east-1 = "ami-40d28157"
+    us-west-1 = "ami-6e165d0e"
+    us-west-2 = "ami-a9d276c9"
+  }
 }
 variable default_instance_user {
   default = "ubuntu"
